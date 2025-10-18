@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         'price_data[product]': 'prod_T9SJrht8qO7y5t',
         'price_data[unit_amount]': (invoiceAmount * 100).toString(), // Convert dollars to cents
         'quantity': '1',
-        'description': 'Ona Core Subscription',
+        'description': 'Subscription Top-up',
         'invoice': invoice.id
       })
     });

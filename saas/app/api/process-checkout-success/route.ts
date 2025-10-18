@@ -178,8 +178,8 @@ export async function POST(request: NextRequest) {
       });
       console.log('Customer updated with name from modal:', customerName, 'metadata and test clock reference');
       
-    } else if (flowType === 'starter_custom_flow' || flowType === 'advanced_custom_flow' || flowType === 'pro_custom_credits_flow' || flowType === 'stability_pro_custom_credits_flow' || flowType === 'core_custom_credits_flow' || flowType === 'free_flow' || flowType === 'perlego_monthly_flow' || flowType === 'ona_core_flow' || flowType === 'stability_core_custom_credits_flow') {
-      const flowName = flowType === 'starter_custom_flow' ? 'Starter' : flowType === 'free_flow' ? 'Free' : flowType === 'core_custom_credits_flow' ? 'Core' : flowType === 'stability_pro_custom_credits_flow' ? 'Stability-Pro' : flowType === 'perlego_monthly_flow' ? 'Perlego-Monthly' : flowType === 'ona_core_flow' ? 'Ona-Core' : flowType === 'stability_core_custom_credits_flow' ? 'Stability-Core' : 'Advanced';
+    } else if (flowType === 'starter_custom_flow' || flowType === 'advanced_custom_flow' || flowType === 'pro_custom_credits_flow' || flowType === 'core_custom_credits_flow' || flowType === 'free_flow') {
+      const flowName = flowType === 'starter_custom_flow' ? 'Starter' : flowType === 'free_flow' ? 'Free' : flowType === 'core_custom_credits_flow' ? 'Core' : flowType === 'pro_custom_credits_flow' ? 'Pro' : 'Advanced';
       console.log(`Processing ${flowName} custom flow - customer and test clock already created`);
       
       // Test clock was already created in the custom flow, just reference it
@@ -620,23 +620,15 @@ export async function POST(request: NextRequest) {
       invoiceId = paidInvoice.id;
       creditGrantId = creditGrant.id;
       
-    } else if (flowType === 'advanced_custom_flow' || flowType === 'pro_custom_credits_flow' || flowType === 'stability_pro_custom_credits_flow' || flowType === 'core_custom_credits_flow' || flowType === 'perlego_monthly_flow' || flowType === 'ona_core_flow' || flowType === 'stability_core_custom_credits_flow') {
-      // Advanced/Pro/Stability-Pro/Core/Perlego/Ona-Core/Stability-Core flow: Get pricing plan details and create billing intent
+    } else if (flowType === 'advanced_custom_flow' || flowType === 'pro_custom_credits_flow' || flowType === 'core_custom_credits_flow') {
+      // Advanced/Pro/Core flow: Get pricing plan details and create billing intent
       
       // Step 2 - Get pricing plan details  
       const pricingPlanId = session.metadata?.pricing_plan_id 
         || (flowType === 'pro_custom_credits_flow' 
               ? 'bpp_test_61TDiJJYF0IjlFXST16T5kls95SQJJF9DR1pbaQwqE08' // Pro plan
-              : flowType === 'stability_pro_custom_credits_flow'
-              ? 'bpp_test_61TRGAFBhWwiSLZp416T5kls95SQJJF9DR1pbaQwqQG0' // Stability Pro plan (same as Pro)
               : flowType === 'core_custom_credits_flow'
               ? 'bpp_test_61TMZYslMhAuWqiDV16T5kls95SQJJF9DR1pbaQwqC3M' // Core plan
-              : flowType === 'stability_core_custom_credits_flow'
-              ? 'bpp_test_61TR7HL9BnwPD8Aum16T5kls95SQJJF9DR1pbaQwq51c' // Stability Core plan
-              : flowType === 'perlego_monthly_flow'
-              ? 'bpp_test_61TOjFji316HZFMam16T5kls95SQJJF9DR1pbaQwqHHM' // Perlego Monthly plan
-              : flowType === 'ona_core_flow'
-              ? 'bpp_test_61TOlflSUotHfMGCK16T5kls95SQJJF9DR1pbaQwq7pQ' // Ona Core plan
               : 'bpp_test_61TCaMaZ0UAUj0zMo16T5kls95SQJJF9DR1pbaQwqQDY'); // Advanced plan
       
       console.log('Getting Advanced pricing plan details for:', pricingPlanId);
@@ -772,9 +764,9 @@ export async function POST(request: NextRequest) {
       const totalAmount = reservedIntent.amount_details.total;
       console.log('Billing intent total amount:', totalAmount);
 
-      // For Core and Stability Core plan, ALWAYS skip PaymentIntent (it's setup-only, payment handled separately via invoice)
-      if (flowType === 'core_custom_credits_flow' || flowType === 'stability_core_custom_credits_flow') {
-        console.log(`${flowType === 'core_custom_credits_flow' ? 'Core' : 'Stability Core'} plan - skipping PaymentIntent creation (payment handled via invoice)`);
+      // For Core plan, ALWAYS skip PaymentIntent (it's setup-only, payment handled separately via invoice)
+      if (flowType === 'core_custom_credits_flow') {
+        console.log('Core plan - skipping PaymentIntent creation (payment handled via invoice)');
         paymentIntentId = null;
       }
       // First check if the reserved intent already has a PaymentIntent
@@ -851,14 +843,11 @@ export async function POST(request: NextRequest) {
       const committedIntent = await commitResponse.json();
       console.log('Billing intent committed:', committedIntent);
       
-      // Step 6 - For Core and Stability Core flow: Create invoice
-      if (flowType === 'core_custom_credits_flow' || flowType === 'stability_core_custom_credits_flow') {
-        const isStabilityCore = flowType === 'stability_core_custom_credits_flow';
-        const invoiceAmount = isStabilityCore 
-          ? (session.metadata?.invoice_amount || '10000000') // $100,000 for Stability Core
-          : '10000'; // $100 for Core
+      // Step 6 - For Core flow: Create invoice
+      if (flowType === 'core_custom_credits_flow') {
+        const invoiceAmount = session.metadata?.invoice_amount || '10000'; // $100 for Core
         
-        console.log(`Creating invoice for ${isStabilityCore ? 'Stability Core' : 'Core'} flow... Amount: $${parseInt(invoiceAmount)/100}`);
+        console.log(`Creating invoice for Core flow... Amount: $${parseInt(invoiceAmount)/100}`);
         
         const invoiceResponse = await fetch('https://api.stripe.com/v1/invoices', {
           method: 'POST',
@@ -943,31 +932,19 @@ export async function POST(request: NextRequest) {
         console.log('Invoice paid:', paidInvoice);
 
         // Step 7 - Create credit grant
-        const creditUnits = isStabilityCore 
-          ? (session.metadata?.credit_units || '500000') // 500,000 custom units for Stability Core
-          : '10000'; // $100 in cents for Core (monetary)
+        const creditUnits = '10000'; // $100 in cents for Core (monetary)
         
-        console.log(`Creating credit grant for ${isStabilityCore ? 'Stability Core' : 'Core'} flow... Units: ${creditUnits}`);
+        console.log(`Creating credit grant for Core flow... Units: ${creditUnits}`);
         
-        const creditGrantBody = isStabilityCore
-          ? new URLSearchParams({
-              'amount[custom_pricing_unit][id]': 'cpu_test_61TR7HDIvZ3f7Eo7X16T5kls95SQJJF9DR1pbaQwqECe', // Stability AI custom unit
-              'amount[custom_pricing_unit][value]': creditUnits,
-              'amount[type]': 'custom_pricing_unit',
-              'applicability_config[scope][price_type]': 'metered',
-              'category': 'paid',
-              'customer': customer.id,
-              'name': 'Purchased Credits'
-            })
-          : new URLSearchParams({
-              'amount[monetary][currency]': 'usd',
-              'amount[monetary][value]': creditUnits,
-              'amount[type]': 'monetary',
-              'applicability_config[scope][price_type]': 'metered',
-              'category': 'paid',
-              'customer': customer.id,
-              'name': 'Purchased Credits'
-            });
+        const creditGrantBody = new URLSearchParams({
+          'amount[monetary][currency]': 'usd',
+          'amount[monetary][value]': creditUnits,
+          'amount[type]': 'monetary',
+          'applicability_config[scope][price_type]': 'metered',
+          'category': 'paid',
+          'customer': customer.id,
+          'name': 'Purchased Credits'
+        });
         
         const creditGrantResponse = await fetch('https://api.stripe.com/v1/billing/credit_grants', {
           method: 'POST',
@@ -1042,11 +1019,8 @@ export async function POST(request: NextRequest) {
     const isStarterFlow = flowType === 'starter_custom_flow';
     const isProFlow = flowType === 'pro_custom_credits_flow';
     const isCoreFlow = flowType === 'core_custom_credits_flow';
-    const isStabilityCoreFlow = flowType === 'stability_core_custom_credits_flow';
     const isFreeFlow = flowType === 'free_flow';
-    const isPerlegoFlow = flowType === 'perlego_monthly_flow';
-    const isOnaCoreFlow = flowType === 'ona_core_flow';
-    const isPricingPlanFlow = flowType === 'advanced_custom_flow' || flowType === 'pro_custom_credits_flow' || flowType === 'stability_pro_custom_credits_flow' || flowType === 'core_custom_credits_flow' || flowType === 'perlego_monthly_flow' || flowType === 'ona_core_flow' || flowType === 'stability_core_custom_credits_flow';
+    const isPricingPlanFlow = flowType === 'advanced_custom_flow' || flowType === 'pro_custom_credits_flow' || flowType === 'core_custom_credits_flow';
     const planName = isPricingPlanFlow ? 'Pricing Plan' : isFreeFlow ? 'Free Plan' : 'Rate Card Plan';
     
     return NextResponse.json({
@@ -1080,10 +1054,8 @@ export async function POST(request: NextRequest) {
         cadenceId: cadence.id,
         pricingPlanId: (session.metadata?.pricing_plan_id || (isProFlow 
           ? 'bpp_test_61TDiJJYF0IjlFXST16T5kls95SQJJF9DR1pbaQwqE08' 
-          : isPerlegoFlow
-          ? 'bpp_test_61TOjFji316HZFMam16T5kls95SQJJF9DR1pbaQwqHHM'
-          : isOnaCoreFlow
-          ? 'bpp_test_61TOlflSUotHfMGCK16T5kls95SQJJF9DR1pbaQwq7pQ'
+          : isCoreFlow
+          ? 'bpp_test_61TMZYslMhAuWqiDV16T5kls95SQJJF9DR1pbaQwqC3M'
           : 'bpp_test_61TCaMaZ0UAUj0zMo16T5kls95SQJJF9DR1pbaQwqQDY')),
         billingIntentId: finalSubscription.id,
         status: finalSubscription.status

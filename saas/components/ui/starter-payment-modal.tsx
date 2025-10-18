@@ -7,7 +7,7 @@ interface StarterPaymentModalProps {
   onClose: () => void;
   onSuccess: (data: { customerId: string; billingIntentId?: string; subscriptionId?: string; testClockId?: string }) => void;
   onError: (error: string) => void;
-  planType?: 'starter' | 'advanced' | 'pro' | 'core' | 'free' | 'perlego-monthly' | 'perlego-termly' | 'perlego-annual' | 'ona-core' | 'stability-core' | 'stability-pro';
+  planType?: 'starter' | 'advanced' | 'pro' | 'core' | 'free';
 }
 
 const StarterPaymentModal: React.FC<StarterPaymentModalProps> = ({ 
@@ -34,7 +34,7 @@ const StarterPaymentModal: React.FC<StarterPaymentModalProps> = ({
     setIsLoading(true);
 
     try {
-      // All plans now use the new custom flow
+      // UBB plans
       let apiEndpoint;
       if (planType === 'starter') {
         apiEndpoint = '/api/create-starter-flow';
@@ -42,22 +42,10 @@ const StarterPaymentModal: React.FC<StarterPaymentModalProps> = ({
         apiEndpoint = '/api/create-advanced-flow';
       } else if (planType === 'pro') {
         apiEndpoint = '/api/create-custom-credits-flow';
-      } else if (planType === 'stability-pro') {
-        apiEndpoint = '/api/stability-custom-credits-flow';
       } else if (planType === 'core') {
         apiEndpoint = '/api/create-core-flow';
       } else if (planType === 'free') {
         apiEndpoint = '/api/create-free-flow';
-      } else if (planType === 'perlego-monthly') {
-        apiEndpoint = '/api/create-perlego-monthly-flow';
-      } else if (planType === 'perlego-termly') {
-        apiEndpoint = '/api/create-perlego-termly-flow';
-      } else if (planType === 'perlego-annual') {
-        apiEndpoint = '/api/create-perlego-annual-flow';
-      } else if (planType === 'ona-core') {
-        apiEndpoint = '/api/create-ona-core-flow';
-      } else if (planType === 'stability-core') {
-        apiEndpoint = '/api/create-stability-core-flow';
       } else {
         onError('Unknown plan type');
         return;
@@ -114,14 +102,8 @@ const StarterPaymentModal: React.FC<StarterPaymentModalProps> = ({
       case 'pro':
         return {
           title: 'Pro Plan',
-          price: '$18.82/month',
+          price: '$200.00/month',
           features: ['Priority execution', 'Custom variables', 'Log search', 'Email support']
-        };
-      case 'stability-pro':
-        return {
-          title: 'Stability Pro Plan',
-          price: '$1,000 per month',
-          features: ['10,000 StabilityAI Credits', 'Priority scenario execution', 'Custom variables', 'Full-text execution log search']
         };
       case 'core':
         return {
@@ -134,30 +116,6 @@ const StarterPaymentModal: React.FC<StarterPaymentModalProps> = ({
           title: 'Pay as you Go Plan',
           price: '$0/month',
           features: ['No-code visual workflow builder', '2000+ apps', 'Routers & filters']
-        };
-      case 'perlego-monthly':
-        return {
-          title: 'Perlego Monthly',
-          price: '$12/month',
-          features: ['Unlimited book access', 'Download offline', 'Note-taking & highlights', 'Multi-device sync']
-        };
-      case 'perlego-termly':
-        return {
-          title: 'Perlego Termly',
-          price: '£10/month (billed £30 every 3 months)',
-          features: ['17% savings', 'Priority support', 'Advanced search', 'Export citations']
-        };
-      case 'perlego-annual':
-        return {
-          title: 'Perlego Annual',
-          price: '£8/month (billed £96 annually)',
-          features: ['33% savings', 'Premium support', 'Early access to new books', 'Exclusive webinars']
-        };
-      case 'ona-core':
-        return {
-          title: 'Ona Core Plan',
-          price: '$20/month',
-          features: ['100 credits/month', 'Sandboxed Ona Environments', 'Ona Agent with Claude Sonnet 4.5', 'Professional edit/review with VS Code Web']
         };
       default:
         return {
